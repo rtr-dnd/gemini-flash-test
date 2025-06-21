@@ -1,3 +1,31 @@
+## ENIAQ Next Template
+
+現場で使いやすい最小限のカスタマイズが施されたNext.jsのテンプレートリポジトリです。
+
+`create-next-app`では以下の設定を使っています。
+
+- Typescript
+- app directory
+- Tailwind CSS
+
+上記で生成されたコードに、以下の設定をしています。
+
+- ESlint/Prettierの設定：[GTS](https://github.com/google/gts), [eslint-plugin-import](https://github.com/import-js/eslint-plugin-import/tree/main)
+- SVGインポートの設定：[SVGR](https://react-svgr.com/docs/next/)
+
+今後以下の内容も含めたいと考えています。
+
+- スタイリングされたUIコンポーネントライブラリ（Mui, Radix, Headless UIのいずれか）
+
+## 使用手順
+
+- 文字列`next-template`を希望のプロジェクト名に置換
+- `git remote set-url origin (新しいリポジトリのURL)`を実行
+- `git remote add template https://github.com/eniaq/next-template`を実行
+- `rename-me.code-workspace`を希望のプロジェクト名に変更し、Workspaceを開く
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
