@@ -1,14 +1,16 @@
 {
-  "name": "loris",
+  "name": "gemini-flash-test",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@svgr/webpack": "^8.1.0",
     "next": "15.0.3",
     "react": "^18.3.1",
