@@ -26,6 +26,7 @@
         ],
         "newlines-between": "always"
       }
-    ]
+    ],
+    "n/no-unsupported-features/node-builtins": "off"
   }
 }

@@ -15,20 +15,15 @@ interface SearchResult {
   hasImage: boolean;
 }
 
-interface SearchResponse {
-  results: SearchResult[];
-  query: string;
-  totalResults: string;
-  time: string;
-}
-
 export default function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '紫陽花 時期';
 
-  const [searchData, setSearchData] = useState<SearchResponse | null>(null);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalResults, setTotalResults] = useState<string>('');
+  const [searchTime, setSearchTime] = useState<string>('');
 
   useEffect(() => {
     const fetchSearchResults = async () => {
@@ -36,6 +31,9 @@ export default function SearchResults() {
 
       setLoading(true);
       setError(null);
+      setResults([]);
+      setTotalResults('');
+      setSearchTime('');
 
       try {
         const response = await fetch('/api/search', {
@@ -50,12 +48,52 @@ export default function SearchResults() {
           throw new Error('Failed to fetch search results');
         }
 
-        const data: SearchResponse = await response.json();
-        setSearchData(data);
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No response body');
+        }
+
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const {done, value} = await reader.read();
+
+          if (done) break;
+
+          buffer += decoder.decode(value, {stream: true});
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6);
+              try {
+                const data = JSON.parse(jsonStr);
+
+                if (data.isComplete === false) {
+                  // 検索開始のマーカー
+                  continue;
+                } else if (data.isComplete === true) {
+                  // 検索完了のマーカー
+                  setTotalResults(data.totalResults || '');
+                  setSearchTime(data.time || '');
+                  setLoading(false);
+                } else if (data.title && data.url && data.description) {
+                  // 検索結果
+                  setResults(prev => [...prev, data]);
+                }
+              } catch (parseError) {
+                console.error('Failed to parse streaming JSON:', parseError);
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error('Search error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
         setLoading(false);
       }
     };
@@ -71,7 +109,13 @@ export default function SearchResults() {
           <Link href="/" className="flex items-center cursor-pointer">
             <GoogLMLogo size="small" className="mr-8" />
           </Link>
-          <SearchBox variant="header" initialValue={query} />
+          <div className="flex-1">
+            <SearchBox
+              variant="header"
+              initialValue={query}
+              className="max-w-[500px]"
+            />
+          </div>
           <div className="flex items-center ml-8 space-x-4">
             <button className="w-6 h-6 grid grid-cols-3 gap-0.5">
               {Array.from({length: 9}).map((_, i) => (
@@ -124,22 +168,20 @@ export default function SearchResults() {
 
       {/* Search results */}
       <main className="px-6 py-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-600">検索中...</div>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-red-600">エラー: {error}</div>
           </div>
-        ) : searchData ? (
+        ) : results.length > 0 ? (
           <>
-            <div className="text-sm text-gray-600 mb-6">
-              {searchData.totalResults}（{searchData.time}）
-            </div>
+            {totalResults && searchTime && (
+              <div className="text-sm text-gray-600 mb-6">
+                {totalResults}（{searchTime}）
+              </div>
+            )}
 
             <div className="max-w-2xl">
-              {searchData.results.map((result, index) => (
+              {results.map((result, index) => (
                 <SearchResultItem
                   key={index}
                   favicon="domain-letter"
@@ -154,8 +196,18 @@ export default function SearchResults() {
                   }}
                 />
               ))}
+
+              {loading && (
+                <div className="flex items-center justify-center py-4">
+                  <div className="text-gray-600">結果を読み込み中...</div>
+                </div>
+              )}
             </div>
           </>
+        ) : loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-600">検索中...</div>
+          </div>
         ) : (
           <div className="flex items-center justify-center py-12">
             <div className="text-gray-600">検索結果が見つかりませんでした</div>
