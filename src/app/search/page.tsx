@@ -1,61 +1,67 @@
 'use client';
 
 import {useSearchParams} from 'next/navigation';
+import {useState, useEffect} from 'react';
 import Link from 'next/link';
 
 import GoogLMLogo from '@/components/GoogLMLogo';
 import SearchBox from '@/components/SearchBox';
 import SearchResultItem from '@/components/SearchResultItem';
 
+interface SearchResult {
+  title: string;
+  url: string;
+  description: string;
+  hasImage: boolean;
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  query: string;
+  totalResults: string;
+  time: string;
+}
+
 export default function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '紫陽花 時期';
 
-  const searchResults = [
-    {
-      favicon: '/api/placeholder/16/16',
-      url: 'https://weathernews.jp › ajisai',
-      title: 'あじさい見頃・人気の名所情報【2025】',
-      description:
-        '今週末もまた日本へ一東日本の各地であじさいが見頃。梅雨を彩る紫陽花花を楽しめうです。今週は21日(土)頃まで、東日本を中心に白目しがにくといこうが美く、気温も高めです。...',
-      image: '/api/placeholder/128/96',
-      hasImage: true,
-    },
-    {
-      favicon: '/api/placeholder/16/16',
-      url: 'https://www.trip-kamakura.com › ...',
-      title: '（6月19日更新）あじさいの開花状況について',
-      description:
-        '3 days ago — 例年の鎌倉市内のあじさい。5月下旬からヤマアジサイやガクアジサイが見頃め、その後6月上旬～下旬にかけて西洋アジサイが見ごろになります。...',
-      hasImage: false,
-    },
-    {
-      favicon: '/api/placeholder/16/16',
-      url: 'https://travel.rakuten.co.jp › ajisai',
-      title: '全国のあじさいの名所43選！2025年あじさい祭り開催',
-      description:
-        '紫陽花の花色は土の酸度によって変化し、アルカリ性では、酸性で青い色になります。5～7月に開花し6月上旬～7月上旬頃に見頃を迎えるため、ちょうど梅雨の時期と風情になるので...',
-      image: '/api/placeholder/128/96',
-      hasImage: true,
-    },
-    {
-      favicon: '/api/placeholder/16/16',
-      url: 'https://enokama.jp › 特集',
-      title: '【2025年最新】鎌倉・江ノ島あじさいの名所10選！見頃や開花...',
-      description:
-        '本格的な夏を前に、江ノ島・鎌倉はあじさいの季節を迎えました。人気のあじさい寺から穴場や神社まで10のスポットをご紹介しまう。2025年6月9日に撮影した写真を更新...',
-      image: '/api/placeholder/128/96',
-      hasImage: true,
-    },
-    {
-      favicon: '/api/placeholder/16/16',
-      url: 'https://tabico.jp › ... › 配信一覧',
-      title: '【2025年】あじさいの見頃はいつ？開花予想日や名言・旅色',
-      description:
-        'Apr 30, 2025 — 2025年における全国のあじさい開花予想日は、北海道が7月上旬から下旬頃、本州の東北地方で6月下旬、関東から九州にかけて6月初旬から中旬にかけて...',
-      hasImage: false,
-    },
-  ];
+  const [searchData, setSearchData] = useState<SearchResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (!query) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({query}),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch search results');
+        }
+
+        const data: SearchResponse = await response.json();
+        setSearchData(data);
+      } catch (err) {
+        console.error('Search error:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchSearchResults();
+  }, [query]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -118,22 +124,43 @@ export default function SearchResults() {
 
       {/* Search results */}
       <main className="px-6 py-6">
-        <div className="text-sm text-gray-600 mb-6">
-          約 1,250,000 件（0.42 秒）
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-600">検索中...</div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-red-600">エラー: {error}</div>
+          </div>
+        ) : searchData ? (
+          <>
+            <div className="text-sm text-gray-600 mb-6">
+              {searchData.totalResults}（{searchData.time}）
+            </div>
 
-        <div className="max-w-2xl">
-          {searchResults.map((result, index) => (
-            <SearchResultItem
-              key={index}
-              {...result}
-              onClick={() => {
-                // 実際のリンクに遷移する処理
-                console.log('Clicked on:', result.title);
-              }}
-            />
-          ))}
-        </div>
+            <div className="max-w-2xl">
+              {searchData.results.map((result, index) => (
+                <SearchResultItem
+                  key={index}
+                  favicon="domain-letter"
+                  url={result.url}
+                  title={result.title}
+                  description={result.description}
+                  hasImage={false}
+                  onClick={() => {
+                    console.log('Clicked on:', result.title);
+                    // 実際のリンクに遷移する処理
+                    window.open(result.url, '_blank');
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-600">検索結果が見つかりませんでした</div>
+          </div>
+        )}
       </main>
     </div>
   );

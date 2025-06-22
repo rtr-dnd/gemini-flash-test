@@ -25,4 +25,6 @@
 
 ## Environment Variables
 - Store sensitive data like API keys in `.env.local`
+- Required environment variables:
+  - `GOOGLE_AI_API_KEY`: Your Google Gemini API key for search results generation
 - Never commit API keys or secrets to the repository
